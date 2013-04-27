@@ -22,10 +22,7 @@ import org.andengine.engine.options.EngineOptions;
 import org.andengine.engine.options.ScreenOrientation;
 import org.andengine.engine.options.resolutionpolicy.RatioResolutionPolicy;
 import org.andengine.entity.Entity;
-import org.andengine.entity.IEntity;
 import org.andengine.entity.modifier.AlphaModifier;
-import org.andengine.entity.modifier.DelayModifier;
-import org.andengine.entity.modifier.IEntityModifier.IEntityModifierListener;
 import org.andengine.entity.modifier.ParallelEntityModifier;
 import org.andengine.entity.modifier.ScaleModifier;
 import org.andengine.entity.modifier.SequenceEntityModifier;
@@ -34,10 +31,13 @@ import org.andengine.entity.scene.IOnAreaTouchListener;
 import org.andengine.entity.scene.IOnSceneTouchListener;
 import org.andengine.entity.scene.ITouchArea;
 import org.andengine.entity.scene.Scene;
+import org.andengine.entity.scene.background.Background;
 import org.andengine.entity.scene.background.SpriteBackground;
 import org.andengine.entity.scene.menu.MenuScene;
 import org.andengine.entity.scene.menu.MenuScene.IOnMenuItemClickListener;
 import org.andengine.entity.scene.menu.item.IMenuItem;
+import org.andengine.entity.scene.menu.item.TextMenuItem;
+import org.andengine.entity.scene.menu.item.decorator.ColorMenuItemDecorator;
 import org.andengine.entity.sprite.Sprite;
 import org.andengine.entity.text.Text;
 import org.andengine.entity.text.TextOptions;
@@ -53,6 +53,7 @@ import org.andengine.input.touch.detector.ClickDetector;
 import org.andengine.input.touch.detector.ClickDetector.IClickDetectorListener;
 import org.andengine.input.touch.detector.ScrollDetector;
 import org.andengine.input.touch.detector.ScrollDetector.IScrollDetectorListener;
+import org.andengine.input.touch.detector.SurfaceScrollDetector;
 import org.andengine.opengl.font.Font;
 import org.andengine.opengl.font.FontFactory;
 import org.andengine.opengl.font.StrokeFont;
@@ -64,11 +65,14 @@ import org.andengine.opengl.texture.region.TextureRegion;
 import org.andengine.opengl.vbo.VertexBufferObjectManager;
 import org.andengine.ui.activity.SimpleBaseGameActivity;
 import org.andengine.util.HorizontalAlign;
-import org.andengine.util.modifier.IModifier;
+import org.andengine.util.debug.Debug;
+import org.andengine.util.level.LevelLoader;
 
-import android.graphics.Color;
+import org.andengine.util.color.Color;
 import android.graphics.Typeface;
+import android.opengl.GLES20;
 import android.util.Log;
+import android.view.KeyEvent;
 
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
@@ -97,15 +101,28 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 	private final float X_GRAVITY = 0;
 	private final float Y_GRAVITY = 0.2f;
 	
-	private final int HIT_BALLOON  = 10;
-	private final int EXTRA_BALLOONS = 3;
-	private final int HIT_WORD = 50;
+	private final int POINT_HIT_BALLOON  = 10;
+	private final int EXTRA_BALLOONS = 4;
+	private final int POINT_HIT_WORD = 50;
 	private final int LENGTH_WORD = 4;
+	
+	
+	protected static final int MENU_RESET = 0;
+	protected static final int MENU_QUIT = MENU_RESET + 1;
+	protected static final int MENU_OK = MENU_QUIT + 1;
+	protected static final int MENU_NEXT_LEVEL = MENU_OK + 1;
+	protected static final int MENU_SKIP = MENU_NEXT_LEVEL + 1;
+
+	protected static final int LEVEL_COUNT = 100;
+	protected static int LEVELS = LEVEL_COUNT;
+	protected static int LEVEL_COLUMNS_PER_SCREEN = 4;
+	protected static int LEVEL_ROWS_PER_SCREEN = 3;
+	protected static float LEVEL_PADDING = 40.0f;
+
 	
 	/* The categories. Multiples of 2*/
 	public static final short CATEGORYBIT_WALL = 1;
 	public static final short CATEGORYBIT_BALLOON = 2;
-	public static final short CATEGORYBIT_PIN = 4;
 	
 	/* And what should collide with what. */
 	public static final short MASKBITS_WALL = CATEGORYBIT_WALL + CATEGORYBIT_BALLOON;
@@ -113,21 +130,29 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 
 	public static final FixtureDef WALL_FIXTURE_DEF = PhysicsFactory.createFixtureDef(0, 0.5f, 0.5f, false, CATEGORYBIT_WALL, MASKBITS_WALL, (short)0);
 
-	public static final FixtureDef BALLOON_FIXTURE_DEF_1 = PhysicsFactory.createFixtureDef(1, 0.5f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0);
-	public static final FixtureDef BALLOON_FIXTURE_DEF_2 = PhysicsFactory.createFixtureDef(1, 0.1f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0);
-	public static final FixtureDef BALLOON_FIXTURE_DEF_3 = PhysicsFactory.createFixtureDef(1, 1.0f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0);
-	public static final FixtureDef BALLOON_FIXTURE_DEF_4 = PhysicsFactory.createFixtureDef(1, 0.5f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0);
-	public static final FixtureDef BALLOON_FIXTURE_DEF_5 = PhysicsFactory.createFixtureDef(0.5f, 0.1f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0);
-	public static final FixtureDef BALLOON_FIXTURE_DEF_6 = PhysicsFactory.createFixtureDef(0.1f, 1.0f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0);
-	public static final FixtureDef BALLOON_FIXTURE_DEF_7 = PhysicsFactory.createFixtureDef(1, 0.5f, 0.1f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0);
-	public static final FixtureDef BALLOON_FIXTURE_DEF_8 = PhysicsFactory.createFixtureDef(0.5f, 0.1f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0);
-	public static final FixtureDef BALLOON_FIXTURE_DEF_9 = PhysicsFactory.createFixtureDef(0.1f, 1.0f, 1.0f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0);
+	public static final int BALLOON_FIXTURE_DEF_COUNT = 9;
+	public static FixtureDef [] BALLOON_FIXTURE_DEF = new FixtureDef[] {
+		PhysicsFactory.createFixtureDef(0.1f, 1.0f, 1.0f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0),
+		PhysicsFactory.createFixtureDef(5, 0.5f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0),
+		PhysicsFactory.createFixtureDef(5, 0.1f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0),
+		PhysicsFactory.createFixtureDef(5, 1.0f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0),
+		PhysicsFactory.createFixtureDef(5, 0.5f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0),
+		PhysicsFactory.createFixtureDef(0.5f, 0.1f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0),
+		PhysicsFactory.createFixtureDef(0.1f, 1.0f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0),
+		PhysicsFactory.createFixtureDef(1, 0.5f, 0.1f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0),
+		PhysicsFactory.createFixtureDef(0.5f, 0.1f, 0.5f, false, CATEGORYBIT_BALLOON, MASKBITS_BALLOON, (short)0)
 
+	};
 	
 	Rectangle ground;
 	Rectangle roof;
 	Rectangle left;
 	Rectangle right;
+
+	protected float minY = 0;
+	protected float maxY = 0;
+
+	protected int maxLevelReached = 100;
 
 
 	/*** Fields***/
@@ -149,9 +174,13 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 	private BitmapTextureAtlas pinTextureAtlas;
 	private TextureRegion pinTextureRegion;
 	
+	private BitmapTextureAtlas levelSelectorTextureAtlas;
+	private TextureRegion levelSelectRegion;
+	
 	private Font fontBalloon;
 	private Font fontScore;
 	private Font fontLevel;
+	private Font fontMenu;
 	
 	private Text scoreText;
 	private Text levelText;
@@ -178,8 +207,16 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 	
 	HUD hud = new HUD();
 	private TimerHandler loopTimerHandler;
-	private boolean isRunning;
+	
 	private boolean isLevelRunning;
+	private int currentLevel;
+	private boolean isLevelSelecting;
+	protected int iLevelClicked = -1;
+	private SurfaceScrollDetector scrollDetector;
+	private ClickDetector clickDetector;
+
+	protected float mCurrentY = 0;
+	
 	
 	/*** SimpleBaseGameActivity ***/
 	@Override
@@ -197,43 +234,7 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 	@Override
 	protected void onCreateResources() {
 		// TODO Auto-generated method stub
-		BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
-
-		
-    	for (int i = 0; i < BALLOON_COLORS; i++) {
-    		int j = i + 1;
-    		this.balloonTextureAtlas[i] = new BitmapTextureAtlas(this.getTextureManager(), 48, 64, TextureOptions.BILINEAR);
-    		this.balloonTextureRegion[i] = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.balloonTextureAtlas[i], this, "balloon" + j +".png", 0, 0);
-    		this.balloonTextureAtlas[i].load();
-    	}
-
-		this.boomTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 48, 64, TextureOptions.BILINEAR);
-		this.boomTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.boomTextureAtlas, this, "boom.png", 0, 0);
-		this.boomTextureAtlas.load();
-		
-		for(int k = 0 ; k < BACKGROUND_TYPES; k++) {
-			this.backgroundTextureAtlas[k] = new BitmapTextureAtlas(this.getTextureManager(), CAMERA_WIDTH, CAMERA_HEIGHT, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
-			int l = k + 1;
-			this.backgroundTextureRegion[k] = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.backgroundTextureAtlas[k], this, "background_sky_"+ l +"_"+ CAMERA_WIDTH + "_" + CAMERA_HEIGHT+".png", 0, 0);
-			this.backgroundTextureAtlas[k].load();
-		}
-		
-		this.pinTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), CAMERA_WIDTH, 30, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
-		this.pinTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.pinTextureAtlas, this, "pin.png", 0, 0);
-		this.pinTextureAtlas.load();
-		
-		FontFactory.setAssetBasePath("font/");
-		this.fontBalloon = FontFactory.createFromAsset(this.getFontManager(), this.getTextureManager(), 256, 256, TextureOptions.BILINEAR_PREMULTIPLYALPHA, this.getAssets(), "Bubblegum.ttf", 40, true, android.graphics.Color.CYAN);		
-		//this.fontScore = FontFactory.createFromAsset(this.getFontManager(), this.getTextureManager(), 512, 512, TextureOptions.BILINEAR_PREMULTIPLYALPHA, this.getAssets(), "Bubblegum.ttf", 5, true, android.graphics.Color.MAGENTA);
-		final ITexture strokeScoreFontTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 256, TextureOptions.BILINEAR);
-		final ITexture strokeLevelFontTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 256, TextureOptions.BILINEAR);
-		this.fontScore = new StrokeFont(this.getFontManager(), strokeScoreFontTexture, Typeface.createFromAsset(getAssets(), "font/Bubblegum.ttf"), 20, true, Color.GRAY, 2, Color.BLACK);
-		this.fontLevel = new StrokeFont(this.getFontManager(), strokeLevelFontTexture, Typeface.createFromAsset(getAssets(), "font/Bubblegum.ttf"), 20, true, Color.GRAY, 2, Color.BLACK);
-		//this.fontLevel = FontFactory.createFromAsset(this.getFontManager(), this.getTextureManager(), 512, 512, TextureOptions.BILINEAR_PREMULTIPLYALPHA, this.getAssets(), "Bubblegum.ttf", 5, true, android.graphics.Color.MAGENTA);
-		this.fontBalloon.load();
-		this.fontScore.load();
-		this.fontLevel.load();
-		
+		loadTextures();
 		
 		readWordsFromFile(LENGTH_WORD);
 		
@@ -247,8 +248,13 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 		this.mainScene = new Scene();
 		this.levelSelectScene = new Scene();
 		this.menuScene = new MenuScene();
+
+		currentLevel = 1;
+		isLevelSelecting = true;
+
+		//createMainScene();
 		
-		return createMainScene();
+		return createLevelScene();
 			
 		
 	}
@@ -275,7 +281,7 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 	public void onClick(ClickDetector pClickDetector, int pPointerID,
 			float pSceneX, float pSceneY) {
 		// TODO Auto-generated method stub
-		
+		loadLevel(iLevelClicked);
 	}
 
 	/*** IOnAreaTouchListener ***/
@@ -292,20 +298,82 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 		return false;
 	}
 
+	@Override
+	public boolean onKeyDown(final int pKeyCode, final KeyEvent pEvent) {
+		if(pKeyCode == KeyEvent.KEYCODE_BACK && pEvent.getAction() == KeyEvent.ACTION_DOWN) {
+			if (this.mEngine.getScene() == this.levelSelectScene)
+				this.finish();
+		}
+
+		if((pKeyCode == KeyEvent.KEYCODE_MENU || pKeyCode == KeyEvent.KEYCODE_BACK) && pEvent.getAction() == KeyEvent.ACTION_DOWN) {
+			if(this.mainScene.hasChildScene()) {
+				/* Remove the menu and reset it. */
+				this.menuScene.back();
+			} else {
+				/* Attach the menu. */
+				this.mainScene.setChildScene(this.menuScene, false, true, true);
+			}
+			return true;
+		} else {
+			return super.onKeyDown(pKeyCode, pEvent);
+		}
+	}
+
 	/*** IOnMenuItemClickListener ***/
 	@Override
 	public boolean onMenuItemClicked(MenuScene pMenuScene, IMenuItem pMenuItem,
 			float pMenuItemLocalX, float pMenuItemLocalY) {
 		// TODO Auto-generated method stub
-		return false;
+		switch (pMenuItem.getID()) {
+
+		case MENU_RESET:
+			return true;
+			
+		case MENU_OK:
+			this.menuScene.back();
+			return true;
+
+		case MENU_NEXT_LEVEL:
+			if (currentLevel == LEVEL_COUNT) {
+				currentLevel = 1;
+			} else {
+				currentLevel++;
+			}
+			loadLevel(currentLevel);
+			//this.mEngine.setScene(mainScene);
+			this.menuScene.back();
+			return true;
+
+		case MENU_SKIP:
+			mEngine.setScene(levelSelectScene);
+			isLevelSelecting = true;
+			this.menuScene.back();
+			return true;
+
+		case MENU_QUIT:	
+			this.finish();
+
+		default:
+			return false;
+		}
+
 	}
+
+	
+
 
 	/*** IOnSceneTouchListener ***/
 	@Override
 	public boolean onSceneTouchEvent(Scene pScene, TouchEvent pSceneTouchEvent) {
 		// TODO Auto-generated method stub
-		return false;
+		if (isLevelSelecting) {
+			this.clickDetector.onTouchEvent(pSceneTouchEvent);
+			this.scrollDetector.onTouchEvent(pSceneTouchEvent);
+		}
+
+		return true;
 	}
+
 
 	/*** IAccelerationListener ***/
 	@Override
@@ -350,8 +418,15 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 	public void onScroll(ScrollDetector pScollDetector, int pPointerID,
 			float pDistanceX, float pDistanceY) {
 		// TODO Auto-generated method stub
+		if ( ((mCurrentY - pDistanceY) < minY) || ((mCurrentY - pDistanceY) > maxY) )
+			return;
+
+		this.camera.offsetCenter(0, -pDistanceY);
+
+		mCurrentY -= pDistanceY;
 		
 	}
+
 
 	@Override
 	public void onScrollFinished(ScrollDetector pScollDetector, int pPointerID,
@@ -362,6 +437,154 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 
 
 	/*** outros métodos ***/
+	
+	public void loadTextures(){
+		BitmapTextureAtlasTextureRegionFactory.setAssetBasePath("gfx/");
+
+    	for (int i = 0; i < BALLOON_COLORS; i++) {
+    		int j = i + 1;
+    		this.balloonTextureAtlas[i] = new BitmapTextureAtlas(this.getTextureManager(), 48, 64, TextureOptions.BILINEAR);
+    		this.balloonTextureRegion[i] = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.balloonTextureAtlas[i], this, "balloon" + j +".png", 0, 0);
+    		this.balloonTextureAtlas[i].load();
+    	}
+
+		this.boomTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 48, 64, TextureOptions.BILINEAR);
+		this.boomTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.boomTextureAtlas, this, "boom.png", 0, 0);
+		this.boomTextureAtlas.load();
+		
+		for(int k = 0 ; k < BACKGROUND_TYPES; k++) {
+			this.backgroundTextureAtlas[k] = new BitmapTextureAtlas(this.getTextureManager(), CAMERA_WIDTH, CAMERA_HEIGHT, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
+			int l = k + 1;
+			this.backgroundTextureRegion[k] = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.backgroundTextureAtlas[k], this, "background_sky_"+ l +"_"+ CAMERA_WIDTH + "_" + CAMERA_HEIGHT+".png", 0, 0);
+			this.backgroundTextureAtlas[k].load();
+		}
+		
+		this.pinTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), CAMERA_WIDTH, 30, TextureOptions.BILINEAR_PREMULTIPLYALPHA);
+		this.pinTextureRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.pinTextureAtlas, this, "pin.png", 0, 0);
+		this.pinTextureAtlas.load();
+		
+		this.levelSelectorTextureAtlas = new BitmapTextureAtlas(this.getTextureManager(), 48, 64);
+		this.levelSelectRegion = BitmapTextureAtlasTextureRegionFactory.createFromAsset(this.levelSelectorTextureAtlas, this, "balloon1.png", 0, 0);
+		this.levelSelectorTextureAtlas.load();
+
+		
+		FontFactory.setAssetBasePath("font/");
+		this.fontBalloon = FontFactory.createFromAsset(this.getFontManager(), this.getTextureManager(), 256, 256, TextureOptions.BILINEAR_PREMULTIPLYALPHA, this.getAssets(), "Bubblegum.ttf", 40, true, android.graphics.Color.CYAN);		
+		//this.fontScore = FontFactory.createFromAsset(this.getFontManager(), this.getTextureManager(), 512, 512, TextureOptions.BILINEAR_PREMULTIPLYALPHA, this.getAssets(), "Bubblegum.ttf", 5, true, android.graphics.Color.MAGENTA);
+		final ITexture strokeScoreFontTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 256, TextureOptions.BILINEAR);
+		final ITexture strokeLevelFontTexture = new BitmapTextureAtlas(this.getTextureManager(), 256, 256, TextureOptions.BILINEAR);
+		this.fontScore = new StrokeFont(this.getFontManager(), strokeScoreFontTexture, Typeface.createFromAsset(getAssets(), "font/Bubblegum.ttf"), 20, true, new Color(0.8f, 0.8f, 0.8f), 2, Color.BLACK);
+		this.fontLevel = new StrokeFont(this.getFontManager(), strokeLevelFontTexture, Typeface.createFromAsset(getAssets(), "font/Bubblegum.ttf"), 20, true, new Color(0.8f, 0.8f, 0.8f), 2, Color.BLACK);
+		this.fontMenu = FontFactory.createFromAsset(this.getFontManager(), this.getTextureManager(), 512, 512, TextureOptions.BILINEAR_PREMULTIPLYALPHA, this.getAssets(), "Bubblegum.ttf", 8, true, android.graphics.Color.WHITE);
+		//this.fontLevel = FontFactory.createFromAsset(this.getFontManager(), this.getTextureManager(), 512, 512, TextureOptions.BILINEAR_PREMULTIPLYALPHA, this.getAssets(), "Bubblegum.ttf", 5, true, android.graphics.Color.MAGENTA);
+		this.fontBalloon.load();
+		this.fontScore.load();
+		this.fontLevel.load();
+		this.fontMenu.load();
+
+	}
+	
+
+	// ===========================================================
+	// Menus
+	// ==========================================================
+
+	protected MenuScene createRetryLevelMenuScene() {
+
+
+		MenuScene menuScene = new MenuScene(this.camera);
+
+		Rectangle rect = new Rectangle(20.0f, 20.0f, CAMERA_WIDTH - 40.0f, CAMERA_HEIGHT - 350.0f, this.getVertexBufferObjectManager());
+		rect.setColor(0, 0, 0);
+		rect.setAlpha(0.8f);
+
+		final Text textCenter = new Text(180.0f, 20.0f, this.fontMenu, "Oops! Try again?", this.getVertexBufferObjectManager());
+
+		final IMenuItem quitMenuItem = new ColorMenuItemDecorator(new TextMenuItem(MENU_QUIT, this.fontMenu, "QUIT", this.getVertexBufferObjectManager()), new Color(1,0,0), new Color(0,0,0));
+		quitMenuItem.setBlendFunction(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+		menuScene.addMenuItem(quitMenuItem);
+
+		final IMenuItem nextLevelMenuItem = new ColorMenuItemDecorator(new TextMenuItem(MENU_SKIP, this.fontMenu, "Level Select", this.getVertexBufferObjectManager()), new Color(1,0,0), new Color(0,0,0));
+		nextLevelMenuItem.setBlendFunction(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA);
+		menuScene.addMenuItem(nextLevelMenuItem);
+
+		menuScene.buildAnimations();
+
+		menuScene.setBackgroundEnabled(false);
+
+		menuScene.setOnMenuItemClickListener(this);
+
+		menuScene.attachChild(rect);
+		menuScene.attachChild(textCenter);
+
+		return menuScene;
+	}
+
+	protected MenuScene createNextLevelMenuScene() {
+
+		MenuScene menuScene = new MenuScene(this.camera);
+
+		Rectangle rect = new Rectangle(20.0f, 20.0f, CAMERA_WIDTH - 40.0f, CAMERA_HEIGHT - 350.0f, this.getVertexBufferObjectManager());
+		rect.setColor(0, 0, 0);
+		rect.setAlpha(0.5f);
+
+		final Text textCenter = new Text(200.0f, 20.0f, this.fontMenu, "Congratulations\n You made it!", this.getVertexBufferObjectManager());
+
+		final IMenuItem quitMenuItem = new ColorMenuItemDecorator(new TextMenuItem(MENU_NEXT_LEVEL, fontMenu, "Next Level", this.getVertexBufferObjectManager()), new Color(1, 0, 0) , new Color(1,1,1));
+		menuScene.addMenuItem(quitMenuItem);
+
+		menuScene.buildAnimations();
+
+		menuScene.setBackgroundEnabled(false);
+
+		menuScene.setOnMenuItemClickListener(this);
+
+		menuScene.attachChild(rect);
+		menuScene.attachChild(textCenter);
+
+		return menuScene;
+	}
+
+	
+	public void loadLevel(final int iLevel) {
+		
+		
+		Debug.d("Level Clicado: ", String.valueOf(iLevelClicked));
+		if (iLevel < 1) return;
+		
+		this.mainScene.detachChildren();
+		this.mainScene.unregisterUpdateHandler(timeHandler);
+		/*
+		for (PhysicsConnector physConnector : this.physConnectList) {
+			this.physicsWorld.unregisterPhysicsConnector(physConnector);
+		}
+		physConnectList.clear();
+		*/
+		
+		/*
+		for (Body body : bodyFaceList) {
+			this.physicsWorld.destroyBody(body);
+		}
+		for (Body body : bodyPlaceList) {
+			this.physicsWorld.destroyBody(body);
+		}
+		*/
+		if (this.physicsWorld != null) {			
+			this.physicsWorld.clearForces();
+			this.physicsWorld.clearPhysicsConnectors();
+		}
+		
+		isLevelSelecting = false;
+		
+		
+		camera.setCenter(CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2);
+		
+		createMainScene();
+		
+		this.mEngine.setScene(mainScene);
+		
+	}
+
 	
 	public Scene createMainScene() {
 		for(int i = 0; i < LAYER_COUNT; i++) {
@@ -432,7 +655,7 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 				if (isLevelRunning) {
 					
 					if (isEqual(word, lettersClicked)) {
-						score = score + HIT_WORD * word.length();
+						score = score + POINT_HIT_WORD * word.length();
 					}
 					
 					lettersClicked = new ArrayList<String>();
@@ -530,8 +753,8 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 	public void createWalls(){
 		ground = new Rectangle(0, CAMERA_HEIGHT - 2, CAMERA_WIDTH, 2, this.getVertexBufferObjectManager());
 		roof = new Rectangle(0, -700, CAMERA_HEIGHT, 2, this.getVertexBufferObjectManager());
-		left = new Rectangle(0, -700, 2, CAMERA_HEIGHT + 100, this.getVertexBufferObjectManager());
-		right = new Rectangle(CAMERA_WIDTH - 2, -700, 2, CAMERA_HEIGHT + 100, this.getVertexBufferObjectManager());
+		left = new Rectangle(0, -700, 2, CAMERA_HEIGHT + 700, this.getVertexBufferObjectManager());
+		right = new Rectangle(CAMERA_WIDTH - 2, -700, 2, CAMERA_HEIGHT + 700, this.getVertexBufferObjectManager());
 
 
 		PhysicsFactory.createBoxBody(this.physicsWorld, ground, BodyType.StaticBody, WALL_FIXTURE_DEF).setUserData("wallGround");
@@ -594,7 +817,9 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 			final Text ballText = new Text(12, 10, this.fontBalloon, balloon.getConteudo(), new TextOptions(HorizontalAlign.CENTER), vertexBufferObjectManager);
 			balloon.attachChild(ballText);
 			
-			Body balloonBody = PhysicsFactory.createBoxBody(this.physicsWorld, balloon, BodyType.DynamicBody, BALLOON_FIXTURE_DEF_3);
+			Random r2 = new Random();
+			int j = r2.nextInt(BALLOON_FIXTURE_DEF_COUNT);
+			Body balloonBody = PhysicsFactory.createBoxBody(this.physicsWorld, balloon, BodyType.DynamicBody, BALLOON_FIXTURE_DEF[j]);
 			balloonBody.setUserData(balloon);
 
 			
@@ -643,7 +868,7 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
 		
 		createBoom(b.getX(), b.getY());
 		
-		score+= HIT_BALLOON;
+		score+= POINT_HIT_BALLOON;
 		System.gc();
 	}
 
@@ -723,6 +948,101 @@ public class BalaoGramaticaActivity extends SimpleBaseGameActivity implements IO
     	else
     		return false;
     }
+    
+	private Scene createLevelScene() {
+
+		
+		this.levelSelectScene = new Scene();
+		
+		this.levelSelectScene.setBackground(new Background(0.2f, 0.2f, 0.5f));
+
+		this.scrollDetector = new SurfaceScrollDetector(this);
+		this.clickDetector = new ClickDetector(this);
+
+		this.levelSelectScene.setOnSceneTouchListener(this);
+		this.levelSelectScene.setTouchAreaBindingOnActionDownEnabled(true);
+		this.levelSelectScene.setOnSceneTouchListenerBindingOnActionDownEnabled(true);
+
+		// calculate the amount of required columns for the level count
+		int totalRows = (LEVELS / LEVEL_COLUMNS_PER_SCREEN) + 1;
+
+		// Calculate space between each level square
+		float spaceBetweenRows = (CAMERA_HEIGHT / LEVEL_ROWS_PER_SCREEN) - LEVEL_PADDING;
+		float spaceBetweenColumns = (CAMERA_WIDTH / LEVEL_COLUMNS_PER_SCREEN) - LEVEL_PADDING;
+
+		//Set the wood Background
+		for (int x = 0; x < CAMERA_WIDTH; x += 128) {
+			for (int y = 0; y < (totalRows*150); y += 128) {
+				//Sprite mBackground = new Sprite(x, y, 128, 128, this.);
+				//this.levelSelectScene.attachChild(this.tableBackground);
+				this.levelSelectScene.setBackground(new Background(0.2f, 0.2f, 0.5f));
+			}
+		}
+		
+ 		// Current Level Counter
+		int iLevel = 1;
+
+		// Create the Level selectors, one row at a time.
+		float boxX = LEVEL_PADDING, boxY = LEVEL_PADDING;
+		for (int y = 0; y < totalRows; y++) {
+			for (int x = 0; x < LEVEL_COLUMNS_PER_SCREEN; x++) {
+
+				// On Touch, save the clicked level in case it's a click and not
+				// a scroll.
+				final int levelToLoad = iLevel;
+
+				// Create the rectangle. If the level selected
+				// has not been unlocked yet, don't allow loading.
+				Sprite box = new Sprite(boxX, boxY, levelSelectRegion, this.getVertexBufferObjectManager()) {
+
+					@Override
+					public boolean onAreaTouched(final TouchEvent pSceneTouchEvent, final float pTouchAreaLocalX, final float pTouchAreaLocalY) {
+						//SolitaireActivity.this.mEngine.setScene(SolitaireActivity.this.scene);
+						if (levelToLoad >= maxLevelReached)
+							iLevelClicked = -1;
+						else {
+							iLevelClicked = levelToLoad;
+							loadLevel(iLevelClicked);
+						}	
+						return false;
+					}
+				};
+				
+				box.setScale(1.5f);
+ 
+				this.levelSelectScene.attachChild(box);
+
+				// Center for different font size
+				if (iLevel < 10) {
+					this.levelSelectScene.attachChild(new Text(boxX + 17.0f, boxY + 3.0f, this.fontLevel, String.valueOf(iLevel), this.getVertexBufferObjectManager()));
+				} else {
+					this.levelSelectScene.attachChild(new Text(boxX + 4.0f, boxY + 3.0f, this.fontLevel, String.valueOf(iLevel), this.getVertexBufferObjectManager()));
+				}
+
+				this.levelSelectScene.registerTouchArea(box);
+
+				iLevel++;
+				boxX += spaceBetweenColumns + LEVEL_PADDING;
+
+				if (iLevel > LEVELS)
+					break;
+			} 
+
+			if (iLevel > LEVELS)
+				break;
+
+			boxY += spaceBetweenRows + LEVEL_PADDING;
+			boxX = LEVEL_PADDING;
+		}
+
+		// Set the max scroll possible, so it does not go over the boundaries.
+		maxY = boxY - CAMERA_HEIGHT + 200;
+
+
+		
+		return this.levelSelectScene;
+	}
+
     
     /* work with levels */
     private String isLevelUnLocked(int levelNum){

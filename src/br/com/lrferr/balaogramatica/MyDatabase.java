@@ -15,6 +15,16 @@ public class MyDatabase extends SQLiteOpenHelper {
         static final String fLevelUnLocked = "levelLocked";
         static final String fLevelBeat = "levelBeat";
         static final String fLevelScore = "levelScore";
+        static final String fLevelBalloonYGravity = "levelBalloonYGravity";
+        static final String fLevelNumberExtraBalloons = "levelNumberExtraBalloons";
+        static final String fLevelSizeWord1 = "levelSizeWord1";
+        static final String fLevelSizeWord2 = "levelSizeWord2";
+        static final String fLevelSizeWord3 = "levelSizeWord3";
+        static final String fLevelNumberWords = "levelNumberWords";
+        static final String fLevelTimeSecondsLoop = "levelTimeSecondsLoop";
+        static final String fLevelFallType = "levelFallType";
+        
+        
        
         public MyDatabase(Context context) {
 // THE VALUE OF 1 ON THE NEXT LINE REPRESENTS THE VERSION NUMBER OF THE DATABASE
@@ -30,8 +40,16 @@ public class MyDatabase extends SQLiteOpenHelper {
                                         fLevelID + " INTEGER PRIMARY KEY , " +
                                         fLevelUnLocked + " TEXT, " +
                                         fLevelBeat + " TEXT, " +
-                                        fLevelScore + " TEXT" +
-                                        ")");
+                                        fLevelScore + " TEXT," +
+                                        fLevelBalloonYGravity + " REAL, " +
+                                        fLevelNumberExtraBalloons + " INTEGER, " +
+                                        fLevelSizeWord1 + " INTEGER, " +
+                                        fLevelSizeWord2 + " INTEGER, " +
+                                        fLevelSizeWord3 + " INTEGER, " +
+                                        fLevelNumberWords + " INTEGER, " +
+                                        fLevelTimeSecondsLoop + " REAL, " +
+                                        fLevelFallType + " INTEGER " +
+                						")");
        
 // OPTIONALLY PREPOPULATE THE TABLE WITH SOME VALUES   
                  ContentValues cv = new ContentValues();
@@ -39,7 +57,30 @@ public class MyDatabase extends SQLiteOpenHelper {
                         cv.put(fLevelUnLocked, "true");
                         cv.put(fLevelBeat, "false");
                         cv.put(fLevelScore, "0");
+                        cv.put(fLevelBalloonYGravity, 0.02f);
+                        cv.put(fLevelNumberExtraBalloons, 2);
+                        cv.put(fLevelSizeWord1, 3);
+                        cv.put(fLevelSizeWord2, 3);
+                        cv.put(fLevelSizeWord3, 3);
+                        cv.put(fLevelNumberWords, 20);
+                        cv.put(fLevelTimeSecondsLoop, 12.0f);
+                        cv.put(fLevelFallType, 1);
                                 db.insert(tLevels, null, cv);
+                        
+                        cv.put(fLevelID, 2);
+                        cv.put(fLevelUnLocked, "false");
+                        cv.put(fLevelBeat, "false");
+                        cv.put(fLevelScore, "0");
+                        cv.put(fLevelBalloonYGravity, 0.03f);
+                        cv.put(fLevelNumberExtraBalloons, 2);
+                        cv.put(fLevelSizeWord1, 3);
+                        cv.put(fLevelSizeWord2, 3);
+                        cv.put(fLevelSizeWord3, 3);
+                        cv.put(fLevelNumberWords, 20);
+                        cv.put(fLevelTimeSecondsLoop, 12.0f);
+                        cv.put(fLevelFallType, 1);
+                                db.insert(tLevels, null, cv);                                
+                                /*
                         cv.put(fLevelID, 2);
                         cv.put(fLevelUnLocked, "false");
                         cv.put(fLevelBeat, "false");
@@ -50,7 +91,7 @@ public class MyDatabase extends SQLiteOpenHelper {
                         cv.put(fLevelBeat, "false");
                         cv.put(fLevelScore, "0");
                                 db.insert(tLevels, null, cv);
-                                       
+                                 */      
 /*             
  * MORE ADVANCED EXAMPLES OF USAGE
  *
